@@ -4,11 +4,11 @@
 
 **Blocked by:** 07 — Package Search TUI.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `sadb uninstall` subcommand registered with Cobra
-- [ ] When a package name is provided, forwards `adb uninstall <package>` with the resolved serial
-- [ ] When no package name is provided, opens the Package Search TUI and uses the selected package
-- [ ] Exits cleanly with no action if the user cancels the Package Search
-- [ ] Test asserts direct-path: correct `uninstall <package>` call issued when package is provided
-- [ ] Test asserts search-path: `pm list packages` called first, then `uninstall <selected-package>` issued
+- [x] `sadb uninstall` subcommand registered with Cobra
+- [x] When a package name is provided, forwards `adb uninstall <package>` with the resolved serial
+- [x] When no package name is provided, opens the Package Search TUI and uses the selected package
+- [x] Exits cleanly with no action if the user cancels the Package Search
+- [x] Test asserts direct-path: correct `uninstall <package>` call issued when package is provided
+- [x] Test asserts search-path: `pm list packages` called first, then `uninstall <selected-package>` issued
