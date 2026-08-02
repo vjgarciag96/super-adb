@@ -4,11 +4,11 @@
 
 **Blocked by:** none — standalone rename on top of the existing #05/#06 implementation.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `sadb shot` registered as a top-level Cobra command (replaces `sadb capture photo`)
-- [ ] `sadb record` registered as a top-level Cobra command (replaces `sadb capture video`)
-- [ ] `captureCmd` parent and `internal/cli/capture.go` removed or repurposed; new files `internal/cli/shot.go` and `internal/cli/record.go` created
-- [ ] `--output` flag moved to each new top-level command (no longer needs `PersistentFlags` on a parent)
-- [ ] `sadb capture` no longer appears in `sadb --help` output
-- [ ] No changes to `internal/capture/capture.go` — `RunPhoto` / `RunVideo` are unchanged
+- [x] `sadb shot` registered as a top-level Cobra command (replaces `sadb capture photo`)
+- [x] `sadb record` registered as a top-level Cobra command (replaces `sadb capture video`)
+- [x] `captureCmd` parent and `internal/cli/capture.go` removed or repurposed; new files `internal/cli/shot.go` and `internal/cli/record.go` created
+- [x] `--output` flag moved to each new top-level command (no longer needs `PersistentFlags` on a parent)
+- [x] `sadb capture` no longer appears in `sadb --help` output
+- [x] No changes to `internal/capture/capture.go` — `RunPhoto` / `RunVideo` are unchanged
