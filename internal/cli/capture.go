@@ -34,12 +34,8 @@ to the output directory, and removes the temp file from the device.`,
 		}
 
 		runner := adb.ShellRunner{}
-		serial, err := resolveDevice(runner)
-		if err != nil {
-			return err
-		}
-
-		localPath, err := capture.RunPhoto(serial, runner, outputDir)
+		cfg := defaultResolveConfig()
+		localPath, err := runCapturePhoto(runner, os.Getenv("SADB_DEVICE"), cfg, outputDir)
 		if err != nil {
 			return err
 		}
@@ -65,10 +61,7 @@ file is removed from the device.`,
 		}
 
 		runner := adb.ShellRunner{}
-		serial, err := resolveDevice(runner)
-		if err != nil {
-			return err
-		}
+		cfg := defaultResolveConfig()
 
 		// Intercept Ctrl+C so the Go process stays alive after the user stops
 		// recording. The SIGINT propagates to the child adb process via the
@@ -84,7 +77,7 @@ file is removed from the device.`,
 		var localPath string
 		go func() {
 			var captureErr error
-			localPath, captureErr = capture.RunVideo(serial, runner, outputDir)
+			localPath, captureErr = runCaptureVideo(runner, os.Getenv("SADB_DEVICE"), cfg, outputDir)
 			recordDone <- captureErr
 		}()
 
@@ -105,19 +98,35 @@ file is removed from the device.`,
 	},
 }
 
-// resolveDevice resolves the active device serial using the standard config
-// (environment variable, session store, device picker).
-func resolveDevice(runner adb.Runner) (string, error) {
-	envSerial := os.Getenv("SADB_DEVICE")
-	cfg := device.ResolveConfig{
-		Picker: picker.BubbleTeaPicker{Stderr: os.Stderr},
-		Store:  session.FileStore{Path: session.DefaultPath()},
-	}
+// runCapturePhoto resolves the active device and takes a screenshot, saving it
+// to outputDir. envSerial is the value of SADB_DEVICE (empty if unset).
+// Returns the local path of the saved file.
+func runCapturePhoto(runner adb.Runner, envSerial string, cfg device.ResolveConfig, outputDir string) (string, error) {
 	serial, err := device.Resolve(envSerial, "", runner, cfg)
 	if err != nil {
 		return "", fmt.Errorf("device resolution: %w", err)
 	}
-	return serial, nil
+	return capture.RunPhoto(serial, runner, outputDir)
+}
+
+// runCaptureVideo resolves the active device and records the screen, saving
+// the video to outputDir. envSerial is the value of SADB_DEVICE (empty if
+// unset). Returns the local path of the saved file.
+func runCaptureVideo(runner adb.Runner, envSerial string, cfg device.ResolveConfig, outputDir string) (string, error) {
+	serial, err := device.Resolve(envSerial, "", runner, cfg)
+	if err != nil {
+		return "", fmt.Errorf("device resolution: %w", err)
+	}
+	return capture.RunVideo(serial, runner, outputDir)
+}
+
+// defaultResolveConfig returns the standard device resolution config using the
+// real BubbleTeaPicker and file-backed session store.
+func defaultResolveConfig() device.ResolveConfig {
+	return device.ResolveConfig{
+		Picker: picker.BubbleTeaPicker{Stderr: os.Stderr},
+		Store:  session.FileStore{Path: session.DefaultPath()},
+	}
 }
 
 func init() {
