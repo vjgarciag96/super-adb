@@ -25,7 +25,7 @@ func TestRunUninstall_DirectPackage(t *testing.T) {
 	f.QueueResponse("Success", nil)
 
 	sel := &stubSelector{}
-	err := runUninstall(f, "", "com.example.app", sel, noopCfg(t))
+	err := runUninstall(f, "", "", "com.example.app", sel, noopCfg(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestRunUninstall_DirectPackage_UsesEnvSerial(t *testing.T) {
 	f.QueueResponse("Success", nil)
 
 	sel := &stubSelector{}
-	err := runUninstall(f, "env-device-123", "com.example.app", sel, noopCfg(t))
+	err := runUninstall(f, "env-device-123", "", "com.example.app", sel, noopCfg(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestRunUninstall_SearchPath_PmListThenUninstall(t *testing.T) {
 	f.QueueResponse("Success", nil)
 
 	sel := &stubSelector{pkg: "com.example.bar"}
-	err := runUninstall(f, "", "", sel, noopCfg(t))
+	err := runUninstall(f, "", "", "", sel, noopCfg(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestRunUninstall_SearchAborted_NoUninstallCall(t *testing.T) {
 	// No uninstall response queued — if it's called the test will catch it.
 
 	sel := &stubSelector{err: search.ErrAborted}
-	err := runUninstall(f, "", "", sel, noopCfg(t))
+	err := runUninstall(f, "", "", "", sel, noopCfg(t))
 	if err != nil {
 		t.Fatalf("expected nil error on abort, got %v", err)
 	}
@@ -139,8 +139,30 @@ func TestRunUninstall_UninstallError_ReturnsError(t *testing.T) {
 	f.QueueResponse("", errFake("INSTALL_FAILED_USER_RESTRICTED"))
 
 	sel := &stubSelector{}
-	err := runUninstall(f, "", "com.example.app", sel, noopCfg(t))
+	err := runUninstall(f, "", "", "com.example.app", sel, noopCfg(t))
 	if err == nil {
 		t.Fatal("expected error when uninstall fails, got nil")
+	}
+}
+
+func TestRunUninstall_FlagSerialOverridesResolution(t *testing.T) {
+	f := &adbtest.FakeRunner{}
+	// No devices call — flagSerial skips resolution entirely.
+	f.QueueResponse("Success", nil)
+
+	sel := &stubSelector{}
+	err := runUninstall(f, "", "flag-device-789", "com.example.app", sel, noopCfg(t))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(f.Calls) != 1 {
+		t.Fatalf("expected 1 ADB call (no devices listing), got %d", len(f.Calls))
+	}
+	if f.Calls[0].Serial != "flag-device-789" {
+		t.Errorf("expected serial %q, got %q", "flag-device-789", f.Calls[0].Serial)
+	}
+	if f.Calls[0].Args[0] != "uninstall" {
+		t.Errorf("expected uninstall call, got %v", f.Calls[0].Args)
 	}
 }

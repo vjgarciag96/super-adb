@@ -25,24 +25,27 @@ find and select the app without needing to know its package name.`,
 		if len(args) > 0 {
 			pkg = args[0]
 		}
+		flagSerial, _ := cmd.Flags().GetString("serial")
 		runner := adb.ShellRunner{}
 		cfg := defaultResolveConfig()
 		sel := search.BubbleTeaSelector{Stderr: os.Stderr}
-		return runUninstall(runner, os.Getenv("SADB_DEVICE"), pkg, sel, cfg)
+		return runUninstall(runner, os.Getenv("SADB_DEVICE"), flagSerial, pkg, sel, cfg)
 	},
 }
 
 func init() {
+	uninstallCmd.Flags().StringP("serial", "s", "", "Target a specific device by serial (overrides SADB_DEVICE)")
 	rootCmd.AddCommand(uninstallCmd)
 }
 
 // runUninstall resolves the active device and uninstalls pkg from it.
 //
+// Resolution priority: flagSerial (-s flag) > envSerial (SADB_DEVICE) > auto-select / picker.
 // If pkg is empty, FetchPackages is called on the active device and the
 // Package Search TUI (sel) is opened so the user can select a package.
 // If the user cancels the search, the function returns nil with no action taken.
-func runUninstall(runner adb.Runner, envSerial, pkg string, sel search.Selector, cfg device.ResolveConfig) error {
-	serial, err := device.Resolve(envSerial, "", runner, cfg)
+func runUninstall(runner adb.Runner, envSerial, flagSerial, pkg string, sel search.Selector, cfg device.ResolveConfig) error {
+	serial, err := device.Resolve(envSerial, flagSerial, runner, cfg)
 	if err != nil {
 		return fmt.Errorf("device resolution: %w", err)
 	}
