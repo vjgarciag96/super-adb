@@ -4,14 +4,14 @@
 
 **Blocked by:** 01 — Project scaffold + ADBRunner seam.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Device resolution logic reads `SADB_DEVICE` and short-circuits to that device when set
-- [ ] Auto-selects the single connected device when exactly one is present
-- [ ] Exits with a clear error message when no devices are connected
-- [ ] Exits with an actionable error (mentioning `sadb device`) when multiple devices are connected and `SADB_DEVICE` is unset
-- [ ] `-s <serial>` flag overrides device resolution
-- [ ] Pass-through forwarding injects `-s <resolved-serial>` and delegates to `adb` verbatim
-- [ ] Pass-through output is identical to the equivalent `adb` command
-- [ ] Tests cover all four device resolution paths using the fake ADBRunner
-- [ ] Test asserts pass-through forwards the correct args with the correct serial
+- [x] Device resolution logic reads `SADB_DEVICE` and short-circuits to that device when set
+- [x] Auto-selects the single connected device when exactly one is present
+- [x] Exits with a clear error message when no devices are connected
+- [x] Exits with an actionable error (mentioning `sadb device`) when multiple devices are connected and `SADB_DEVICE` is unset
+- [x] `-s <serial>` flag overrides device resolution
+- [x] Pass-through forwarding injects `-s <resolved-serial>` and delegates to `adb` verbatim
+- [x] Pass-through output is identical to the equivalent `adb` command
+- [x] Tests cover all four device resolution paths using the fake ADBRunner
+- [x] Test asserts pass-through forwards the correct args with the correct serial
