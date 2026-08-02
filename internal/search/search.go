@@ -140,20 +140,21 @@ func (m Model) View() string {
 	return sb.String()
 }
 
-// BubbleTeaSearcher fetches the package list from the active device and runs the interactive TUI.
-type BubbleTeaSearcher struct {
+// Selector interactively selects a package from the given list.
+// It returns ErrAborted if the user cancels.
+type Selector interface {
+	Select(packages []string) (string, error)
+}
+
+// BubbleTeaSelector runs the interactive package search TUI against a pre-fetched package list.
+type BubbleTeaSelector struct {
 	// Stderr is the writer for TUI output. Should be set to os.Stderr by callers.
 	Stderr io.Writer
 }
 
-// Search fetches installed packages from the device identified by serial and launches the
-// interactive TUI. It returns the selected package name, or ErrAborted if the user cancels.
-func (s BubbleTeaSearcher) Search(serial string, runner adb.Runner) (string, error) {
-	packages, err := FetchPackages(serial, runner)
-	if err != nil {
-		return "", err
-	}
-
+// Select opens the interactive TUI with the given package list and returns the
+// selected package name, or ErrAborted if the user cancels.
+func (s BubbleTeaSelector) Select(packages []string) (string, error) {
 	out := s.Stderr
 	if out == nil {
 		out = io.Discard
@@ -170,4 +171,20 @@ func (s BubbleTeaSearcher) Search(serial string, runner adb.Runner) (string, err
 		return "", ErrAborted
 	}
 	return m.Selected(), nil
+}
+
+// BubbleTeaSearcher fetches the package list from the active device and runs the interactive TUI.
+type BubbleTeaSearcher struct {
+	// Stderr is the writer for TUI output. Should be set to os.Stderr by callers.
+	Stderr io.Writer
+}
+
+// Search fetches installed packages from the device identified by serial and launches the
+// interactive TUI. It returns the selected package name, or ErrAborted if the user cancels.
+func (s BubbleTeaSearcher) Search(serial string, runner adb.Runner) (string, error) {
+	packages, err := FetchPackages(serial, runner)
+	if err != nil {
+		return "", err
+	}
+	return BubbleTeaSelector{Stderr: s.Stderr}.Select(packages)
 }
