@@ -4,11 +4,11 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Go module initialised (`go.mod`, `go.sum`), Cobra wired as the root command
-- [ ] `ADBRunner` interface defined: accepts a device serial and a list of arguments, returns output and an error
-- [ ] Real `ADBRunner` implementation shells out to the `adb` binary on PATH
-- [ ] Fake `ADBRunner` test helper records all calls (serial + args) and returns configurable output/errors; lives in a shared test package so all modules can import it
-- [ ] `sadb --help` runs without error
-- [ ] CI (or `go test ./...`) passes with at least one smoke test exercising the fake
+- [x] Go module initialised (`go.mod`, `go.sum`), Cobra wired as the root command
+- [x] `ADBRunner` interface defined: accepts a device serial and a list of arguments, returns output and an error
+- [x] Real `ADBRunner` implementation shells out to the `adb` binary on PATH
+- [x] Fake `ADBRunner` test helper records all calls (serial + args) and returns configurable output/errors; lives in a shared test package so all modules can import it
+- [x] `sadb --help` runs without error
+- [x] CI (or `go test ./...`) passes with at least one smoke test exercising the fake

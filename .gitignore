@@ -1,0 +1,5 @@
+# Build output
+sadb
+
+# Go test cache / cover profiles
+*.out
