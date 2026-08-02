@@ -1,5 +1,5 @@
 # Build output
-sadb
+/sadb
 
 # Go test cache / cover profiles
 *.out

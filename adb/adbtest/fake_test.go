@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/vicgarci/sadb/internal/adbtest"
+	"github.com/vicgarci/sadb/adb/adbtest"
 )
 
 // Smoke test: FakeRunner satisfies the adb.Runner contract and records calls correctly.
