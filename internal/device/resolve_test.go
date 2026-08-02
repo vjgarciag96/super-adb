@@ -32,15 +32,24 @@ func (p *fakePicker) Pick(devices []string) (string, error) {
 }
 
 // fakeStore is an in-memory Store for tests.
+// saves records every value passed to Save in order.
 type fakeStore struct {
-	saved  string
+	saves  []string
 	loaded string
 }
 
 func (s *fakeStore) Load() string { return s.loaded }
 func (s *fakeStore) Save(serial string) error {
-	s.saved = serial
+	s.saves = append(s.saves, serial)
 	return nil
+}
+
+// lastSave returns the most recent value passed to Save, or "" if Save was never called.
+func (s *fakeStore) lastSave() string {
+	if len(s.saves) == 0 {
+		return ""
+	}
+	return s.saves[len(s.saves)-1]
 }
 
 func cfg(p *fakePicker, s *fakeStore) device.ResolveConfig {
@@ -106,6 +115,29 @@ func TestResolve_StoredSerial_UsedWhenConnected(t *testing.T) {
 	}
 }
 
+func TestResolve_StoredSerial_ClearedWhenStale(t *testing.T) {
+	f := &adbtest.FakeRunner{}
+	// Single device so no picker needed — isolates just the clear behaviour.
+	f.QueueResponse(devicesOutput("new-device-1"), nil)
+	p := &fakePicker{}
+	store := &fakeStore{loaded: "old-disconnected-device"}
+
+	serial, err := device.Resolve("", "", f, cfg(p, store))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if serial != "new-device-1" {
+		t.Errorf("expected auto-selected serial, got %q", serial)
+	}
+	// Store must have been explicitly cleared (Save("")) when stale serial detected.
+	if len(store.saves) == 0 || store.saves[0] != "" {
+		t.Errorf("expected first Save call to clear the store with empty string, got saves=%v", store.saves)
+	}
+	if p.called {
+		t.Error("picker should not be called with a single device")
+	}
+}
+
 func TestResolve_StoredSerial_IgnoredWhenStale(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	// Device list does NOT include the stored serial.
@@ -123,8 +155,8 @@ func TestResolve_StoredSerial_IgnoredWhenStale(t *testing.T) {
 	if serial != "new-device-1" {
 		t.Errorf("expected picker-chosen serial, got %q", serial)
 	}
-	if store.saved != "new-device-1" {
-		t.Errorf("expected new serial saved after stale pick, got %q", store.saved)
+	if store.lastSave() != "new-device-1" {
+		t.Errorf("expected new serial saved after stale pick, got %q", store.lastSave())
 	}
 }
 
@@ -192,8 +224,8 @@ func TestResolve_MultipleDevices_SavesPickedSerial(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if store.saved != "a" {
-		t.Errorf("expected store to save serial %q, got %q", "a", store.saved)
+	if store.lastSave() != "a" {
+		t.Errorf("expected store to save serial %q, got %q", "a", store.lastSave())
 	}
 }
 

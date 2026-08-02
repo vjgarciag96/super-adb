@@ -11,9 +11,9 @@
 
 **Blocked by:** 10 — Guard against stale stored serial (done)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] When the stored serial is absent from the live device list, `cfg.Store.Save("")` is called before falling through
-- [ ] `FileStore.Load` treats an empty file as "nothing stored" (already true — `TrimSpace("")` returns `""`)
-- [ ] Test covers the stale-serial-clears-store path
-- [ ] Existing stale-serial tests still pass
+- [x] When the stored serial is absent from the live device list, `cfg.Store.Save("")` is called before falling through
+- [x] `FileStore.Load` treats an empty file as "nothing stored" (already true — `TrimSpace("")` returns `""`)
+- [x] Test covers the stale-serial-clears-store path (`TestResolve_StoredSerial_ClearedWhenStale`)
+- [x] Existing stale-serial tests still pass

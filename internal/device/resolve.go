@@ -63,7 +63,10 @@ func Resolve(envSerial, flagSerial string, runner adb.Runner, cfg ResolveConfig)
 				return stored, nil
 			}
 		}
-		// Stored serial is not in the live list — fall through to normal resolution.
+		// Stored serial is no longer connected — clear it so the file never
+		// holds a serial that isn't currently attached.
+		_ = cfg.Store.Save("")
+		// Fall through to normal resolution.
 	}
 
 	switch len(serials) {
