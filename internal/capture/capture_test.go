@@ -2,6 +2,7 @@ package capture_test
 
 import (
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,14 +14,18 @@ import (
 
 func TestRunPhoto_Success(t *testing.T) {
 	f := &adbtest.FakeRunner{}
-	f.QueueResponse("", nil)           // screencap
+	f.QueueResponse("", nil)              // screencap
 	f.QueueResponse("1 file pulled", nil) // pull
-	f.QueueResponse("", nil)           // rm
+	f.QueueResponse("", nil)              // rm
 
-	destDir := t.TempDir()
-	localPath, err := capture.RunPhoto("emulator-5554", f, destDir)
+	localPath := filepath.Join(t.TempDir(), "photo.png")
+	got, err := capture.RunPhoto("emulator-5554", f, localPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got != localPath {
+		t.Errorf("expected returned path %q, got %q", localPath, got)
 	}
 
 	if len(f.Calls) != 3 {
@@ -51,11 +56,8 @@ func TestRunPhoto_Success(t *testing.T) {
 	if pull.Args[1] != devicePath {
 		t.Errorf("pull: expected device path %q, got %q", devicePath, pull.Args[1])
 	}
-	if !strings.HasPrefix(pull.Args[2], destDir) || !strings.HasSuffix(pull.Args[2], ".png") {
-		t.Errorf("pull: unexpected local path %q (expected under %s, .png)", pull.Args[2], destDir)
-	}
-	if localPath != pull.Args[2] {
-		t.Errorf("RunPhoto returned %q but pull used %q", localPath, pull.Args[2])
+	if pull.Args[2] != localPath {
+		t.Errorf("pull: expected local path %q, got %q", localPath, pull.Args[2])
 	}
 
 	// Call 2: adb shell rm <device_path>
@@ -75,7 +77,7 @@ func TestRunPhoto_ScreencapError_ReturnsError(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	f.QueueResponse("", errors.New("permission denied"))
 
-	_, err := capture.RunPhoto("emulator-5554", f, t.TempDir())
+	_, err := capture.RunPhoto("emulator-5554", f, filepath.Join(t.TempDir(), "photo.png"))
 	if err == nil {
 		t.Fatal("expected error when screencap fails, got nil")
 	}
@@ -90,7 +92,7 @@ func TestRunPhoto_PullError_CleanupStillRuns(t *testing.T) {
 	f.QueueResponse("", errors.New("connection reset")) // pull fails
 	f.QueueResponse("", nil)                            // rm cleanup
 
-	_, err := capture.RunPhoto("emulator-5554", f, t.TempDir())
+	_, err := capture.RunPhoto("emulator-5554", f, filepath.Join(t.TempDir(), "photo.png"))
 	if err == nil {
 		t.Fatal("expected error when pull fails, got nil")
 	}
@@ -107,14 +109,18 @@ func TestRunPhoto_PullError_CleanupStillRuns(t *testing.T) {
 
 func TestRunVideo_Success(t *testing.T) {
 	f := &adbtest.FakeRunner{}
-	f.QueueResponse("", nil)           // screenrecord (completes naturally or via signal)
+	f.QueueResponse("", nil)              // screenrecord (completes naturally or via signal)
 	f.QueueResponse("1 file pulled", nil) // pull
-	f.QueueResponse("", nil)           // rm
+	f.QueueResponse("", nil)              // rm
 
-	destDir := t.TempDir()
-	localPath, err := capture.RunVideo("emulator-5554", f, destDir)
+	localPath := filepath.Join(t.TempDir(), "video.mp4")
+	got, err := capture.RunVideo("emulator-5554", f, localPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got != localPath {
+		t.Errorf("expected returned path %q, got %q", localPath, got)
 	}
 
 	if len(f.Calls) != 3 {
@@ -139,11 +145,8 @@ func TestRunVideo_Success(t *testing.T) {
 	if pull.Args[0] != "pull" || pull.Args[1] != devicePath {
 		t.Errorf("pull: unexpected args %v", pull.Args)
 	}
-	if !strings.HasPrefix(pull.Args[2], destDir) || !strings.HasSuffix(pull.Args[2], ".mp4") {
-		t.Errorf("pull: unexpected local path %q", pull.Args[2])
-	}
-	if localPath != pull.Args[2] {
-		t.Errorf("RunVideo returned %q but pull used %q", localPath, pull.Args[2])
+	if pull.Args[2] != localPath {
+		t.Errorf("pull: expected local path %q, got %q", localPath, pull.Args[2])
 	}
 
 	// Call 2: adb shell rm <device_path>
@@ -159,7 +162,7 @@ func TestRunVideo_PullError_CleanupStillRuns(t *testing.T) {
 	f.QueueResponse("", errors.New("connection reset")) // pull fails
 	f.QueueResponse("", nil)                            // rm cleanup
 
-	_, err := capture.RunVideo("emulator-5554", f, t.TempDir())
+	_, err := capture.RunVideo("emulator-5554", f, filepath.Join(t.TempDir(), "video.mp4"))
 	if err == nil {
 		t.Fatal("expected error when pull fails, got nil")
 	}
@@ -176,7 +179,7 @@ func TestRunVideo_ScreenrecordError_ReturnsError(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	f.QueueResponse("", errors.New("device offline")) // screenrecord fails (not a signal)
 
-	_, err := capture.RunVideo("emulator-5554", f, t.TempDir())
+	_, err := capture.RunVideo("emulator-5554", f, filepath.Join(t.TempDir(), "video.mp4"))
 	if err == nil {
 		t.Fatal("expected error when screenrecord fails hard, got nil")
 	}

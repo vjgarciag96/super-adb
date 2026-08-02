@@ -10,25 +10,24 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/vicgarci/sadb/adb"
 )
 
-// RunPhoto takes a screenshot of the active device and saves it to destDir.
-// Returns the full local path of the saved file.
+// RunPhoto takes a screenshot of the active device and saves it to localPath.
+// The caller is responsible for supplying the full resolved local file path.
+// Returns localPath on success.
 //
 // ADB sequence:
 //
 //	adb shell screencap -p /sdcard/sadb_photo_<ts>.png
-//	adb pull /sdcard/sadb_photo_<ts>.png <destDir>/photo_<ts>.png
+//	adb pull /sdcard/sadb_photo_<ts>.png <localPath>
 //	adb shell rm /sdcard/sadb_photo_<ts>.png
-func RunPhoto(serial string, runner adb.Runner, destDir string) (string, error) {
+func RunPhoto(serial string, runner adb.Runner, localPath string) (string, error) {
 	ts := time.Now().Format("20060102_150405")
 	devicePath := fmt.Sprintf("/sdcard/sadb_photo_%s.png", ts)
-	localPath := filepath.Join(destDir, fmt.Sprintf("photo_%s.png", ts))
 
 	if _, err := runner.Run(serial, "shell", "screencap", "-p", devicePath); err != nil {
 		return "", fmt.Errorf("screencap: %w", err)
@@ -37,7 +36,8 @@ func RunPhoto(serial string, runner adb.Runner, destDir string) (string, error) 
 	return pullAndClean(serial, runner, devicePath, localPath)
 }
 
-// RunVideo records the device screen and saves the recording to destDir.
+// RunVideo records the device screen and saves the recording to localPath.
+// The caller is responsible for supplying the full resolved local file path.
 // Recording stops when the underlying adb process exits (e.g. when the user
 // presses Ctrl+C — the terminal delivers SIGINT to the child adb process via
 // the foreground process group, and the Go process intercepts the signal via
@@ -49,12 +49,11 @@ func RunPhoto(serial string, runner adb.Runner, destDir string) (string, error) 
 // ADB sequence:
 //
 //	adb shell screenrecord /sdcard/sadb_video_<ts>.mp4
-//	adb pull /sdcard/sadb_video_<ts>.mp4 <destDir>/video_<ts>.mp4
+//	adb pull /sdcard/sadb_video_<ts>.mp4 <localPath>
 //	adb shell rm /sdcard/sadb_video_<ts>.mp4
-func RunVideo(serial string, runner adb.Runner, destDir string) (string, error) {
+func RunVideo(serial string, runner adb.Runner, localPath string) (string, error) {
 	ts := time.Now().Format("20060102_150405")
 	devicePath := fmt.Sprintf("/sdcard/sadb_video_%s.mp4", ts)
-	localPath := filepath.Join(destDir, fmt.Sprintf("video_%s.mp4", ts))
 
 	_, err := runner.Run(serial, "shell", "screenrecord", devicePath)
 	if err != nil && !isSignalExit(err) {
