@@ -62,6 +62,10 @@ is forwarded to adb verbatim, with automatic device selection applied.`,
 	// to the underlying adb command without cobra rejecting them.
 	DisableFlagParsing: true,
 
+	// ArbitraryArgs prevents cobra's legacyArgs check from rejecting unknown
+	// "subcommand" names (e.g. "shell", "logcat") as errors before RunE fires.
+	Args: cobra.ArbitraryArgs,
+
 	RunE: func(cmd *cobra.Command, args []string) error {
 		runner := adb.ShellRunner{}
 		envSerial := os.Getenv("SADB_DEVICE")
