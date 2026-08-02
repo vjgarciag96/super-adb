@@ -4,9 +4,9 @@
 
 **Blocked by:** 03 — Device Picker TUI + session persistence.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `sadb device` subcommand registered with Cobra
-- [ ] Running `sadb device` opens the Device Picker regardless of the current `SADB_DEVICE` value
-- [ ] Selecting a device updates the Active Device for the session via the same persistence mechanism established in ticket 03
-- [ ] `sadb device --help` describes the command correctly
+- [x] `sadb device` subcommand registered with Cobra
+- [x] Running `sadb device` opens the Device Picker regardless of the current `SADB_DEVICE` value
+- [x] Selecting a device updates the Active Device for the session via the same persistence mechanism established in ticket 03
+- [x] `sadb device --help` describes the command correctly

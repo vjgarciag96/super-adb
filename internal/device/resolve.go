@@ -54,7 +54,7 @@ func Resolve(envSerial, flagSerial string, runner adb.Runner, cfg ResolveConfig)
 	if err != nil {
 		return "", fmt.Errorf("listing devices: %w", err)
 	}
-	serials := parseDevices(out)
+	serials := ParseDevices(out)
 
 	// If a previously-picked serial is still connected, use it without prompting.
 	if stored := cfg.Store.Load(); stored != "" {
@@ -84,9 +84,9 @@ func Resolve(envSerial, flagSerial string, runner adb.Runner, cfg ResolveConfig)
 	}
 }
 
-// parseDevices extracts device serials from the output of `adb devices`.
+// ParseDevices extracts device serials from the output of `adb devices`.
 // It skips the header line and any lines that are not in "serial\tstate" format.
-func parseDevices(output string) []string {
+func ParseDevices(output string) []string {
 	var serials []string
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSpace(line)

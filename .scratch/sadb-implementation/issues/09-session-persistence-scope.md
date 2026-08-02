@@ -9,7 +9,7 @@
 
 **Blocked by:** 03 — Device Picker TUI (done)
 
-**Status:** decided — option 3 (global file, documented)
+**Status:** done
 
 **Decision:** Keep `~/.sadb/device` as a user-global "last-used device" rather than a per-terminal-session value. Rationale: eval-based export requires shell function setup (user friction); TTY-keyed files add implementation complexity for limited gain. The behavior is documented in the `session` package doc comment. If per-terminal scoping becomes a real user need, the eval path remains available and takes priority (the env var is checked before the file in `device.Resolve`).
 
@@ -18,5 +18,5 @@ Fix 10 (stale serial guard) means the file never silently causes problems: if th
 - [x] Decision documented in `internal/session/store.go` package comment
 - [x] After device pick, the serial is available to subsequent commands via file (not env var — documented tradeoff)
 - [x] Stale file values do not suppress the picker (fixed in issue 10)
-- [ ] `sadb device` command (ticket 04) uses the same persistence mechanism
+- [x] `sadb device` command (ticket 04) uses the same persistence mechanism
 - [x] Eval-based path documented as future upgrade option if per-terminal scope is needed
