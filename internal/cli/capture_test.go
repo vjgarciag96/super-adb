@@ -11,14 +11,12 @@ import (
 
 func TestRunCapturePhoto_SavesToOutputDir(t *testing.T) {
 	f := &adbtest.FakeRunner{}
-	// Device resolution: one device, auto-select.
-	f.QueueResponse("List of devices attached\nemulator-5554\tdevice\n", nil)
 	f.QueueResponse("", nil)              // screencap
 	f.QueueResponse("1 file pulled", nil) // pull
 	f.QueueResponse("", nil)              // rm
 
 	destDir := t.TempDir()
-	localPath, err := runCapturePhoto(f, "", noopCfg(t), destDir)
+	localPath, err := runCapturePhoto(f, "emulator-5554", destDir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -31,19 +29,18 @@ func TestRunCapturePhoto_SavesToOutputDir(t *testing.T) {
 	}
 }
 
-func TestRunCapturePhoto_UsesEnvSerial(t *testing.T) {
-	// When envSerial is set, device resolution is skipped — no "devices" call.
+func TestRunCapturePhoto_UsesResolvedSerial(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	f.QueueResponse("", nil)              // screencap
 	f.QueueResponse("1 file pulled", nil) // pull
 	f.QueueResponse("", nil)              // rm
 
-	_, err := runCapturePhoto(f, "env-device-123", noopCfg(t), t.TempDir())
+	_, err := runCapturePhoto(f, "env-device-123", t.TempDir())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// All three ADB calls must use the env serial.
+	// All three ADB calls must use the provided serial.
 	if len(f.Calls) != 3 {
 		t.Fatalf("expected 3 ADB calls, got %d", len(f.Calls))
 	}
@@ -56,10 +53,9 @@ func TestRunCapturePhoto_UsesEnvSerial(t *testing.T) {
 
 func TestRunCapturePhoto_ScreencapError_ReturnsError(t *testing.T) {
 	f := &adbtest.FakeRunner{}
-	f.QueueResponse("List of devices attached\nemulator-5554\tdevice\n", nil)
 	f.QueueResponse("", errFake("screencap failed"))
 
-	_, err := runCapturePhoto(f, "", noopCfg(t), t.TempDir())
+	_, err := runCapturePhoto(f, "emulator-5554", t.TempDir())
 	if err == nil {
 		t.Fatal("expected error on screencap failure, got nil")
 	}
@@ -69,14 +65,12 @@ func TestRunCapturePhoto_ScreencapError_ReturnsError(t *testing.T) {
 
 func TestRunCaptureVideo_SavesToOutputDir(t *testing.T) {
 	f := &adbtest.FakeRunner{}
-	// Device resolution: one device, auto-select.
-	f.QueueResponse("List of devices attached\nemulator-5554\tdevice\n", nil)
 	f.QueueResponse("", nil)              // screenrecord
 	f.QueueResponse("1 file pulled", nil) // pull
 	f.QueueResponse("", nil)              // rm
 
 	destDir := t.TempDir()
-	localPath, err := runCaptureVideo(f, "", noopCfg(t), destDir)
+	localPath, err := runCaptureVideo(f, "emulator-5554", destDir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -89,13 +83,13 @@ func TestRunCaptureVideo_SavesToOutputDir(t *testing.T) {
 	}
 }
 
-func TestRunCaptureVideo_UsesEnvSerial(t *testing.T) {
+func TestRunCaptureVideo_UsesResolvedSerial(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	f.QueueResponse("", nil)              // screenrecord
 	f.QueueResponse("1 file pulled", nil) // pull
 	f.QueueResponse("", nil)              // rm
 
-	_, err := runCaptureVideo(f, "env-device-456", noopCfg(t), t.TempDir())
+	_, err := runCaptureVideo(f, "env-device-456", t.TempDir())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -112,10 +106,9 @@ func TestRunCaptureVideo_UsesEnvSerial(t *testing.T) {
 
 func TestRunCaptureVideo_ScreenrecordError_ReturnsError(t *testing.T) {
 	f := &adbtest.FakeRunner{}
-	f.QueueResponse("List of devices attached\nemulator-5554\tdevice\n", nil)
 	f.QueueResponse("", errFake("device offline")) // screenrecord fails (not a signal)
 
-	_, err := runCaptureVideo(f, "", noopCfg(t), t.TempDir())
+	_, err := runCaptureVideo(f, "emulator-5554", t.TempDir())
 	if err == nil {
 		t.Fatal("expected error on screenrecord failure, got nil")
 	}

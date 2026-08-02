@@ -11,6 +11,43 @@ import (
 	"github.com/vicgarci/sadb/internal/session"
 )
 
+// withDevice wraps a curated command's RunE so that device resolution happens
+// automatically before the command body runs. The resolved serial and the
+// ADB runner are injected into fn; no command needs to call device.Resolve,
+// read SADB_DEVICE, or define its own -s flag.
+//
+// Resolution priority (highest first):
+//
+//	-s flag  >  SADB_DEVICE env  >  auto-select / picker
+// defaultResolveConfig returns the standard device resolution config using the
+// real BubbleTeaPicker and file-backed session store.
+func defaultResolveConfig() device.ResolveConfig {
+	return device.ResolveConfig{
+		Picker: picker.BubbleTeaPicker{Stderr: os.Stderr},
+		Store:  session.FileStore{Path: session.DefaultPath()},
+	}
+}
+
+// withDevice wraps a curated command's RunE so that device resolution happens
+// automatically before the command body runs. The resolved serial and the
+// ADB runner are injected into fn; no command needs to call device.Resolve,
+// read SADB_DEVICE, or define its own -s flag.
+//
+// Resolution priority (highest first):
+//
+//	-s flag  >  SADB_DEVICE env  >  auto-select / picker
+func withDevice(fn func(cmd *cobra.Command, args []string, runner adb.Runner, serial string) error) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		flagSerial, _ := cmd.Flags().GetString("serial")
+		runner := adb.ShellRunner{}
+		serial, err := device.Resolve(os.Getenv("SADB_DEVICE"), flagSerial, runner, defaultResolveConfig())
+		if err != nil {
+			return err
+		}
+		return fn(cmd, args, runner, serial)
+	}
+}
+
 // rootCmd is the top-level sadb command.
 var rootCmd = &cobra.Command{
 	Use:   "sadb",
@@ -64,4 +101,12 @@ func extractSerial(args []string) (serial string, remaining []string) {
 // Execute runs the root command.
 func Execute() error {
 	return rootCmd.Execute()
+}
+
+func init() {
+	// -s is a persistent flag so every curated subcommand inherits it without
+	// having to declare it themselves. The root pass-through command has
+	// DisableFlagParsing=true so it never sees this flag; extractSerial handles
+	// -s for that path instead.
+	rootCmd.PersistentFlags().StringP("serial", "s", "", "Target a specific device by serial (overrides SADB_DEVICE)")
 }

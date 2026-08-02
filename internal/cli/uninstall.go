@@ -7,7 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vicgarci/sadb/adb"
-	"github.com/vicgarci/sadb/internal/device"
 	"github.com/vicgarci/sadb/internal/search"
 )
 
@@ -20,36 +19,26 @@ If a package name is provided it is passed directly to 'adb uninstall'.
 If no package name is provided, the Package Search TUI opens so you can
 find and select the app without needing to know its package name.`,
 	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: withDevice(func(cmd *cobra.Command, args []string, runner adb.Runner, serial string) error {
 		var pkg string
 		if len(args) > 0 {
 			pkg = args[0]
 		}
-		flagSerial, _ := cmd.Flags().GetString("serial")
-		runner := adb.ShellRunner{}
-		cfg := defaultResolveConfig()
 		sel := search.BubbleTeaSelector{Stderr: os.Stderr}
-		return runUninstall(runner, os.Getenv("SADB_DEVICE"), flagSerial, pkg, sel, cfg)
-	},
+		return runUninstall(runner, serial, pkg, sel)
+	}),
 }
 
 func init() {
-	uninstallCmd.Flags().StringP("serial", "s", "", "Target a specific device by serial (overrides SADB_DEVICE)")
 	rootCmd.AddCommand(uninstallCmd)
 }
 
-// runUninstall resolves the active device and uninstalls pkg from it.
+// runUninstall uninstalls pkg from the given device.
 //
-// Resolution priority: flagSerial (-s flag) > envSerial (SADB_DEVICE) > auto-select / picker.
-// If pkg is empty, FetchPackages is called on the active device and the
-// Package Search TUI (sel) is opened so the user can select a package.
-// If the user cancels the search, the function returns nil with no action taken.
-func runUninstall(runner adb.Runner, envSerial, flagSerial, pkg string, sel search.Selector, cfg device.ResolveConfig) error {
-	serial, err := device.Resolve(envSerial, flagSerial, runner, cfg)
-	if err != nil {
-		return fmt.Errorf("device resolution: %w", err)
-	}
-
+// Device resolution has already happened; serial is the resolved device serial.
+// If pkg is empty, FetchPackages is called and the Package Search TUI (sel) is
+// opened so the user can select a package. If the user cancels, returns nil.
+func runUninstall(runner adb.Runner, serial, pkg string, sel search.Selector) error {
 	if pkg == "" {
 		packages, err := search.FetchPackages(serial, runner)
 		if err != nil {

@@ -8,9 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vicgarci/sadb/adb"
 	"github.com/vicgarci/sadb/internal/capture"
-	"github.com/vicgarci/sadb/internal/device"
-	"github.com/vicgarci/sadb/internal/picker"
-	"github.com/vicgarci/sadb/internal/session"
 )
 
 var captureCmd = &cobra.Command{
@@ -23,7 +20,7 @@ var capturePhotoCmd = &cobra.Command{
 	Short: "Take a screenshot and pull it to the current directory",
 	Long: `photo runs 'adb shell screencap' on the active device, pulls the result
 to the output directory, and removes the temp file from the device.`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: withDevice(func(cmd *cobra.Command, _ []string, runner adb.Runner, serial string) error {
 		outputDir, _ := cmd.Flags().GetString("output")
 		if outputDir == "" {
 			var err error
@@ -32,16 +29,13 @@ to the output directory, and removes the temp file from the device.`,
 				return fmt.Errorf("getting working directory: %w", err)
 			}
 		}
-
-		runner := adb.ShellRunner{}
-		cfg := defaultResolveConfig()
-		localPath, err := runCapturePhoto(runner, os.Getenv("SADB_DEVICE"), cfg, outputDir)
+		localPath, err := runCapturePhoto(runner, serial, outputDir)
 		if err != nil {
 			return err
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Saved: %s\n", localPath)
 		return nil
-	},
+	}),
 }
 
 var captureVideoCmd = &cobra.Command{
@@ -50,7 +44,7 @@ var captureVideoCmd = &cobra.Command{
 	Long: `video runs 'adb shell screenrecord' on the active device. Press Ctrl+C to
 stop recording. The video is then pulled to the output directory and the temp
 file is removed from the device.`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: withDevice(func(cmd *cobra.Command, _ []string, runner adb.Runner, serial string) error {
 		outputDir, _ := cmd.Flags().GetString("output")
 		if outputDir == "" {
 			var err error
@@ -59,9 +53,6 @@ file is removed from the device.`,
 				return fmt.Errorf("getting working directory: %w", err)
 			}
 		}
-
-		runner := adb.ShellRunner{}
-		cfg := defaultResolveConfig()
 
 		// Intercept Ctrl+C so the Go process stays alive after the user stops
 		// recording. The SIGINT propagates to the child adb process via the
@@ -77,7 +68,7 @@ file is removed from the device.`,
 		var localPath string
 		go func() {
 			var captureErr error
-			localPath, captureErr = runCaptureVideo(runner, os.Getenv("SADB_DEVICE"), cfg, outputDir)
+			localPath, captureErr = runCaptureVideo(runner, serial, outputDir)
 			recordDone <- captureErr
 		}()
 
@@ -95,38 +86,19 @@ file is removed from the device.`,
 
 		fmt.Fprintf(cmd.OutOrStdout(), "Saved: %s\n", localPath)
 		return nil
-	},
+	}),
 }
 
-// runCapturePhoto resolves the active device and takes a screenshot, saving it
-// to outputDir. envSerial is the value of SADB_DEVICE (empty if unset).
-// Returns the local path of the saved file.
-func runCapturePhoto(runner adb.Runner, envSerial string, cfg device.ResolveConfig, outputDir string) (string, error) {
-	serial, err := device.Resolve(envSerial, "", runner, cfg)
-	if err != nil {
-		return "", fmt.Errorf("device resolution: %w", err)
-	}
+// runCapturePhoto takes a screenshot on the given device and saves it to outputDir.
+// Device resolution has already happened; serial is the resolved device serial.
+func runCapturePhoto(runner adb.Runner, serial, outputDir string) (string, error) {
 	return capture.RunPhoto(serial, runner, outputDir)
 }
 
-// runCaptureVideo resolves the active device and records the screen, saving
-// the video to outputDir. envSerial is the value of SADB_DEVICE (empty if
-// unset). Returns the local path of the saved file.
-func runCaptureVideo(runner adb.Runner, envSerial string, cfg device.ResolveConfig, outputDir string) (string, error) {
-	serial, err := device.Resolve(envSerial, "", runner, cfg)
-	if err != nil {
-		return "", fmt.Errorf("device resolution: %w", err)
-	}
+// runCaptureVideo records the screen on the given device and saves it to outputDir.
+// Device resolution has already happened; serial is the resolved device serial.
+func runCaptureVideo(runner adb.Runner, serial, outputDir string) (string, error) {
 	return capture.RunVideo(serial, runner, outputDir)
-}
-
-// defaultResolveConfig returns the standard device resolution config using the
-// real BubbleTeaPicker and file-backed session store.
-func defaultResolveConfig() device.ResolveConfig {
-	return device.ResolveConfig{
-		Picker: picker.BubbleTeaPicker{Stderr: os.Stderr},
-		Store:  session.FileStore{Path: session.DefaultPath()},
-	}
 }
 
 func init() {

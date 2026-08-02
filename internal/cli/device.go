@@ -2,12 +2,10 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/vicgarci/sadb/adb"
 	"github.com/vicgarci/sadb/internal/device"
-	"github.com/vicgarci/sadb/internal/picker"
 	"github.com/vicgarci/sadb/internal/session"
 )
 
@@ -19,8 +17,9 @@ for the current session. The selection is persisted so subsequent sadb
 commands target the chosen device without requiring -s each time.`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		runner := adb.ShellRunner{}
-		p := picker.BubbleTeaPicker{Stderr: os.Stderr}
-		store := session.FileStore{Path: session.DefaultPath()}
+		cfg := defaultResolveConfig()
+		p := cfg.Picker
+		store := cfg.Store
 
 		serial, err := runDeviceCommand(runner, p, store)
 		if err != nil {
