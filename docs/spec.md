@@ -34,6 +34,11 @@ The Active Device persists for the terminal session via `SADB_DEVICE`, eliminati
 12. As an Android developer, I want any sadb Curated Subcommand that requires a package name to support Package Search when no package is provided, so that I never have to memorise or copy-paste a package name.
 13. As an Android developer, I want `sadb` pass-through commands to produce identical output to the equivalent `adb` command, so that I can trust the tool without learning new output formats.
 14. As an Android developer, I want to pass `-s <serial>` to `sadb` to target a specific device explicitly, so that I can override the Active Device when needed, consistent with how `adb` works.
+15. As an Android developer, I want Tab completion to suggest sadb's own subcommands and all native adb subcommands, so that I don't have to memorise the full command surface.
+16. As an Android developer, I want Tab completion on `-s` to list my connected device serials, so that I can select a device without running `adb devices` first.
+17. As an Android developer, I want Tab completion on `sadb uninstall` to list installed packages on the Active Device, so that I can find the package without memorising its name.
+18. As an Android developer, I want shell completions to work in zsh, bash, fish, and PowerShell, so that I'm not forced into a specific shell.
+19. As an Android developer, I want completions to activate automatically when I install sadb via Homebrew, so that I don't have to run any setup commands.
 
 ## Implementation Decisions
 
@@ -46,6 +51,7 @@ The Active Device persists for the terminal session via `SADB_DEVICE`, eliminati
 - **`sadb capture video`**: Runs `adb shell screenrecord` in the foreground; the user presses Ctrl+C to stop. On stop, pulls the file to the current directory and cleans up the temp file on the device.
 - **Package Search**: Invoked when a Curated Subcommand requires a package and none is given. Runs `adb shell pm list packages` on the Active Device, parses the output into a list, and renders a live-filtered TUI list. On selection, the chosen package name is passed to the underlying command.
 - **Pass-through behaviour**: Any `sadb` invocation that does not match a Curated Subcommand is forwarded to `adb` verbatim after device resolution, with the resolved serial injected as `-s <serial>`.
+- **Shell Completion**: sadb uses Cobra's built-in completion system to generate shell-specific Completion Scripts for zsh, bash, fish, and PowerShell. The binary exposes `sadb completion <shell>` to emit the script and `sadb completion install` to write it to the correct location automatically. The Homebrew formula installs the Completion Script as part of `brew install sadb` so no user action is required. adb's native subcommands are included in completions via a hardcoded list in a dedicated source file (`adb_commands.go`), mirroring the approach used by zsh's own `_adb` completion function. Device serials (for `-s`) and package names (for `uninstall`) are completed dynamically at Tab-press time by shelling out to `adb devices` and `adb shell pm list packages` respectively.
 
 ## Testing Decisions
 
