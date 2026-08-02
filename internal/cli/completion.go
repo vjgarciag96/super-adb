@@ -40,18 +40,20 @@ func completeDeviceSerials(_ *cobra.Command, _ []string, _ string) ([]string, co
 	return parseDeviceSerials(out), cobra.ShellCompDirectiveNoFileComp
 }
 
-// completePackages is a cobra ValidArgsFunction that suggests installed package names
-// on the active device.
-func completePackages(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-	serial, _ := cmd.Flags().GetString("serial")
-	if serial == "" {
-		serial = os.Getenv("SADB_DEVICE")
+// makeCompletePackages returns a cobra ValidArgsFunction that fetches the installed
+// package list directly — no Package Search TUI — and returns it for shell completion.
+func makeCompletePackages(runner adb.Runner) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return func(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		serial, _ := cmd.Flags().GetString("serial")
+		if serial == "" {
+			serial = os.Getenv("SADB_DEVICE")
+		}
+		packages, err := search.FetchPackages(serial, runner)
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		return packages, cobra.ShellCompDirectiveNoFileComp
 	}
-	packages, err := search.FetchPackages(serial, adb.ShellRunner{})
-	if err != nil {
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
-	return packages, cobra.ShellCompDirectiveNoFileComp
 }
 
 var completionCmd = &cobra.Command{
@@ -242,5 +244,5 @@ func init() {
 	_ = rootCmd.RegisterFlagCompletionFunc("serial", completeDeviceSerials)
 
 	// Suggest package names when completing the uninstall argument.
-	uninstallCmd.ValidArgsFunction = completePackages
+	uninstallCmd.ValidArgsFunction = makeCompletePackages(adb.ShellRunner{})
 }

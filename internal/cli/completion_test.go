@@ -3,6 +3,9 @@ package cli
 import (
 	"reflect"
 	"testing"
+
+	"github.com/spf13/cobra"
+	"github.com/vicgarci/sadb/adb/adbtest"
 )
 
 func TestParseDeviceSerials(t *testing.T) {
@@ -61,6 +64,48 @@ R5CR71L28YB	offline`,
 				t.Errorf("parseDeviceSerials() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// cmdWithSerial returns a minimal cobra command with the -s/--serial flag set.
+func cmdWithSerial(serial string) *cobra.Command {
+	cmd := &cobra.Command{}
+	cmd.Flags().StringP("serial", "s", "", "")
+	if serial != "" {
+		_ = cmd.Flags().Set("serial", serial)
+	}
+	return cmd
+}
+
+// Package completion must fetch packages directly without opening the Package Search TUI —
+// the uninstall command's interactive picker path is a separate flow tested in uninstall_test.go.
+
+func TestCompletePackages_ReturnsFetchedPackages(t *testing.T) {
+	f := &adbtest.FakeRunner{}
+	f.QueueResponse("package:com.example.foo\npackage:com.example.bar\n", nil)
+
+	got, directive := makeCompletePackages(f)(cmdWithSerial("emulator-5554"), nil, "")
+
+	if len(f.Calls) != 1 || f.Calls[0].Args[0] != "shell" {
+		t.Fatalf("expected one pm list packages call, got %+v", f.Calls)
+	}
+	want := []string{"com.example.foo", "com.example.bar"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("packages = %v, want %v", got, want)
+	}
+	if directive != cobra.ShellCompDirectiveNoFileComp {
+		t.Errorf("unexpected directive %v", directive)
+	}
+}
+
+func TestCompletePackages_RunnerError_ReturnsEmpty(t *testing.T) {
+	f := &adbtest.FakeRunner{}
+	f.QueueResponse("", errFake("adb error"))
+
+	got, _ := makeCompletePackages(f)(cmdWithSerial("emulator-5554"), nil, "")
+
+	if len(got) != 0 {
+		t.Errorf("expected empty on error, got %v", got)
 	}
 }
 
