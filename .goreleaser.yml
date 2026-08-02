@@ -1,0 +1,50 @@
+version: 2
+
+project_name: sadb
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: sadb
+    main: ./cmd/sadb
+    binary: sadb
+    goos:
+      - darwin
+    goarch:
+      - arm64
+      - amd64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: sadb
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    files:
+      - none*
+
+checksum:
+  name_template: "checksums.txt"
+
+brews:
+  - name: sadb
+    repository:
+      owner: vjgarciag96
+      name: homebrew-super-adb
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaser-bot
+      email: bot@goreleaser.com
+    homepage: "https://github.com/vjgarciag96/super-adb"
+    description: "A TUI-enhanced wrapper around ADB that makes Android development workflows faster and less error-prone."
+    license: "MIT"
+    install: |
+      bin.install "sadb"
+      generate_completions_from_executable(bin/"sadb", "completion")
+    test: |
+      assert_match "_sadb", shell_output("#{bin}/sadb completion zsh")

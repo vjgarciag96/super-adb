@@ -6,10 +6,10 @@
 
 **See also:** ADR 0001 — Go over Kotlin (chose Go partly for Homebrew compatibility). ADR 0002 — Shell completions (Homebrew is the primary zero-setup distribution path for completions).
 
-**Status:** todo
+**Status:** in progress
 
-- [ ] Set up GitHub Actions release workflow: tag triggers a build, produces a Darwin arm64 + amd64 binary, uploads to GitHub Releases
-- [ ] Create a Homebrew tap repository (`homebrew-sadb` or similar)
-- [ ] Write the Homebrew formula: `url`, `sha256`, `bin.install`, and `zsh_completion` (or `bash_completion` / `fish_completion`) stanzas
-- [ ] Verify `brew install` installs the binary and activates zsh completions without any user action
-- [ ] Update issue #16 checklist item for Homebrew once formula is live
+- [x] Set up GitHub Actions release workflow: tag triggers a build, produces a Darwin arm64 + amd64 binary, uploads to GitHub Releases
+- [ ] Create a Homebrew tap repository (`homebrew-sadb` or similar) — must be done manually on GitHub
+- [x] Write the Homebrew formula: `url`, `sha256`, `bin.install`, and `zsh_completion` stanzas — goreleaser auto-generates from `.goreleaser.yml` `brews` config
+- [ ] Verify `brew install` installs the binary and activates zsh completions without any user action — blocked on first tagged release
+- [x] Update issue #16 checklist item for Homebrew once formula is live

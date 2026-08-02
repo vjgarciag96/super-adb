@@ -15,4 +15,4 @@
 - [x] Add `sadb completion <shell>` subcommand (Cobra built-in — enable via `rootCmd.CompletionOptions`)
 - [x] Add `sadb completion install` subcommand that detects the current shell and writes the Completion Script to the correct location
 - [x] Verify completions work end-to-end in zsh and bash
-- [ ] Update Homebrew formula (when built) to install the zsh Completion Script automatically
+- [x] Update Homebrew formula (when built) to install the zsh Completion Script automatically
