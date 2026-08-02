@@ -6,7 +6,7 @@
 
 **Blocked by:** 03 — Device Picker TUI (done)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `Store` interface declared exactly once, in `internal/session`
 - [ ] `device.Resolve` accepts `session.Store` (or the interface is re-exported from `session` as the canonical type)

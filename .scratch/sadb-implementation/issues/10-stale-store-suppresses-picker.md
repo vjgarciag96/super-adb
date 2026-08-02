@@ -13,7 +13,7 @@ Alternatively, only use the store when the stored device appears in the connecte
 
 **Blocked by:** 03 — Device Picker TUI (done)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A stored serial that is not in the live device list does not suppress the picker
 - [ ] Resolution falls through gracefully when stored serial is stale

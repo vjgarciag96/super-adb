@@ -6,6 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vicgarci/sadb/adb"
+	"github.com/vicgarci/sadb/internal/device"
+	"github.com/vicgarci/sadb/internal/picker"
+	"github.com/vicgarci/sadb/internal/session"
 )
 
 // rootCmd is the top-level sadb command.
@@ -31,7 +34,12 @@ is forwarded to adb verbatim, with automatic device selection applied.`,
 		// via the runner).
 		serial, remaining := extractSerial(args)
 
-		out, err := runPassThrough(runner, envSerial, serial, remaining)
+		cfg := device.ResolveConfig{
+			Picker: picker.BubbleTeaPicker{Stderr: os.Stderr},
+			Store:  session.FileStore{Path: session.DefaultPath()},
+		}
+
+		out, err := runPassThrough(runner, envSerial, serial, remaining, cfg)
 		if out != "" {
 			fmt.Fprintln(cmd.OutOrStdout(), out)
 		}

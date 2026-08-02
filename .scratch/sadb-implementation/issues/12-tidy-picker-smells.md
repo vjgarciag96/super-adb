@@ -16,7 +16,7 @@ Callers of `BubbleTeaPicker.Pick` never interact with `Model` directly (it's an 
 
 **Blocked by:** 11 — Consolidate Store interfaces (the struct in item 3 uses whichever `Store` type survives that ticket)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `output()` inlined into `Pick`
 - [ ] `picker.Model` state query simplified (single accessor or result type)

@@ -4,7 +4,23 @@ import (
 	"testing"
 
 	"github.com/vicgarci/sadb/adb/adbtest"
+	"github.com/vicgarci/sadb/internal/device"
+	"github.com/vicgarci/sadb/internal/session"
 )
+
+// noopPicker is a Picker that should never be called in these tests
+// (all test scenarios resolve without needing the picker).
+type noopPicker struct{ t *testing.T }
+
+func (p noopPicker) Pick(_ []string) (string, error) {
+	p.t.Helper()
+	p.t.Fatal("picker should not be called in this test")
+	return "", nil
+}
+
+func noopCfg(t *testing.T) device.ResolveConfig {
+	return device.ResolveConfig{Picker: noopPicker{t}, Store: session.NoopStore{}}
+}
 
 func TestPassThrough_ForwardsCommandWithSerial(t *testing.T) {
 	f := &adbtest.FakeRunner{}
@@ -13,7 +29,7 @@ func TestPassThrough_ForwardsCommandWithSerial(t *testing.T) {
 	// The actual pass-through command.
 	f.QueueResponse("success", nil)
 
-	out, err := runPassThrough(f, "", "", []string{"shell", "getprop", "ro.product.model"})
+	out, err := runPassThrough(f, "", "", []string{"shell", "getprop", "ro.product.model"}, noopCfg(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -39,7 +55,7 @@ func TestPassThrough_FlagSerialOverridesResolution(t *testing.T) {
 	// No devices queued — resolution should be skipped due to -s flag.
 	f.QueueResponse("overridden output", nil)
 
-	out, err := runPassThrough(f, "", "device-123", []string{"install", "app.apk"})
+	out, err := runPassThrough(f, "", "device-123", []string{"install", "app.apk"}, noopCfg(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -59,7 +75,7 @@ func TestPassThrough_EnvDeviceOverridesResolution(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	f.QueueResponse("env output", nil)
 
-	_, err := runPassThrough(f, "env-device-456", "", []string{"logcat"})
+	_, err := runPassThrough(f, "env-device-456", "", []string{"logcat"}, noopCfg(t))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

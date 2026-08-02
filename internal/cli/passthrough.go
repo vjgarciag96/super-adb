@@ -14,8 +14,8 @@ import (
 // args are the raw adb arguments to forward (e.g. ["shell", "getprop"]).
 //
 // Returns the combined output from adb and any error.
-func runPassThrough(runner adb.Runner, envSerial, flagSerial string, args []string) (string, error) {
-	serial, err := device.Resolve(envSerial, flagSerial, runner)
+func runPassThrough(runner adb.Runner, envSerial, flagSerial string, args []string, cfg device.ResolveConfig) (string, error) {
+	serial, err := device.Resolve(envSerial, flagSerial, runner, cfg)
 	if err != nil {
 		return "", fmt.Errorf("device resolution: %w", err)
 	}

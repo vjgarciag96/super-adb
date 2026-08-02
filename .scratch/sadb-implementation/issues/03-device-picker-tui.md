@@ -4,11 +4,11 @@
 
 **Blocked by:** 02 — Device resolution + pass-through forwarding.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Bubble Tea Device Picker component renders a list of connected devices and emulators
-- [ ] Selecting a device sets `SADB_DEVICE` for the terminal session
-- [ ] Session persistence mechanism decided and implemented (eval-based or env-file)
-- [ ] The "multiple devices" error from ticket 02 is replaced by the Device Picker
-- [ ] Pressing Ctrl+C or Escape aborts the picker and exits without running the command
-- [ ] Device list is fetched via `ADBRunner` (testable with the fake)
+- [x] Bubble Tea Device Picker component renders a list of connected devices and emulators
+- [x] Selecting a device sets `SADB_DEVICE` for the terminal session
+- [x] Session persistence mechanism decided and implemented (eval-based or env-file)
+- [x] The "multiple devices" error from ticket 02 is replaced by the Device Picker
+- [x] Pressing Ctrl+C or Escape aborts the picker and exits without running the command
+- [x] Device list is fetched via `ADBRunner` (testable with the fake)
