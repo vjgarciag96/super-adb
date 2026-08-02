@@ -4,13 +4,13 @@
 
 **Blocked by:** 05 — `sadb capture photo` (shares the `capture` subcommand scaffold).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `sadb capture video` subcommand registered under the existing `capture` parent command
-- [ ] Runs `adb shell screenrecord` to a generated temp path on the device in the foreground
-- [ ] Ctrl+C stops the recording and triggers the pull + cleanup sequence
-- [ ] Pulls the recorded file to the current working directory
-- [ ] `--output <path>` flag overrides the save location
-- [ ] Cleans up the temp file on the device after a successful pull
-- [ ] Reports a clear error if pull fails after recording stops; cleanup is still attempted
-- [ ] Tests assert the correct ADB call sequence (screenrecord → pull → rm) using the fake ADBRunner
+- [x] `sadb capture video` subcommand registered under the existing `capture` parent command
+- [x] Runs `adb shell screenrecord` to a generated temp path on the device in the foreground
+- [x] Ctrl+C stops the recording and triggers the pull + cleanup sequence
+- [x] Pulls the recorded file to the current working directory
+- [x] `--output <path>` flag overrides the save location
+- [x] Cleans up the temp file on the device after a successful pull
+- [x] Reports a clear error if pull fails after recording stops; cleanup is still attempted
+- [x] Tests assert the correct ADB call sequence (screenrecord → pull → rm) using the fake ADBRunner

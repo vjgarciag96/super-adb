@@ -4,12 +4,12 @@
 
 **Blocked by:** 02 — Device resolution + pass-through forwarding.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `sadb capture photo` subcommand registered under a `capture` parent command
-- [ ] Runs `adb shell screencap` to a generated temp path on the device
-- [ ] Pulls the captured file to the current working directory
-- [ ] `--output <path>` flag overrides the save location
-- [ ] Cleans up the temp file on the device after a successful pull
-- [ ] Reports a clear error if screencap or pull fails; temp file cleanup is still attempted
-- [ ] Tests assert the correct ADB call sequence (screencap → pull → rm) using the fake ADBRunner
+- [x] `sadb capture photo` subcommand registered under a `capture` parent command
+- [x] Runs `adb shell screencap` to a generated temp path on the device
+- [x] Pulls the captured file to the current working directory
+- [x] `--output <path>` flag overrides the save location
+- [x] Cleans up the temp file on the device after a successful pull
+- [x] Reports a clear error if screencap or pull fails; temp file cleanup is still attempted
+- [x] Tests assert the correct ADB call sequence (screencap → pull → rm) using the fake ADBRunner
