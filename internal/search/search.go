@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/vicgarci/sadb/adb"
+	"github.com/vicgarci/sadb/internal/viewport"
 )
 
 // ErrAborted is returned when the user cancels the search with Ctrl+C or Escape.
@@ -40,28 +41,26 @@ func FetchPackages(serial string, runner adb.Runner) ([]string, error) {
 // Model is the Bubble Tea model for package search.
 // It is exported so tests can drive it without running a full terminal program.
 type Model struct {
-	packages   []string
-	filter     string
-	cursor     int
-	viewOffset int // index of the first visible item in the filtered list
-	height     int // max number of list items to display at once
-	aborted    bool
-	selected   string
+	packages []string
+	filter   string
+	vp       viewport.Viewport
+	aborted  bool
+	selected string
 }
 
 // New creates a Model with the given package list.
 func New(packages []string) Model {
-	return Model{packages: packages, height: 10}
+	return Model{packages: packages, vp: viewport.Viewport{Height: 10}}
 }
 
 // Filter returns the current filter string.
 func (m Model) Filter() string { return m.filter }
 
 // Cursor returns the current highlighted index within the filtered list.
-func (m Model) Cursor() int { return m.cursor }
+func (m Model) Cursor() int { return m.vp.Cursor }
 
 // ViewOffset returns the index of the first visible item in the filtered list.
-func (m Model) ViewOffset() int { return m.viewOffset }
+func (m Model) ViewOffset() int { return m.vp.Offset }
 
 // Selected returns the chosen package name, or "" if no selection has been made.
 func (m Model) Selected() string { return m.selected }
@@ -91,28 +90,17 @@ func (m Model) Init() tea.Cmd { return nil }
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.height = msg.Height - 6 // reserve lines for header, footer, and scroll hints
-		if m.height < 5 {
-			m.height = 5
-		}
+		m.vp.SetHeight(msg.Height, 6, 5)
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyUp:
-			filtered := m.filtered()
-			if len(filtered) > 0 {
-				m.cursor = (m.cursor - 1 + len(filtered)) % len(filtered)
-				m.snapViewOffset(len(filtered))
-			}
+			m.vp.MoveUp(len(m.filtered()))
 		case tea.KeyDown:
-			filtered := m.filtered()
-			if len(filtered) > 0 {
-				m.cursor = (m.cursor + 1) % len(filtered)
-				m.snapViewOffset(len(filtered))
-			}
+			m.vp.MoveDown(len(m.filtered()))
 		case tea.KeyEnter:
 			filtered := m.filtered()
 			if len(filtered) > 0 {
-				m.selected = filtered[m.cursor]
+				m.selected = filtered[m.vp.Cursor]
 				return m, tea.Quit
 			}
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -121,28 +109,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyBackspace:
 			if len(m.filter) > 0 {
 				m.filter = m.filter[:len(m.filter)-1]
-				m.cursor = 0
-				m.viewOffset = 0
+				m.vp.Cursor = 0
+				m.vp.Offset = 0
 			}
 		case tea.KeyRunes:
 			m.filter += string(msg.Runes)
-			m.cursor = 0
-			m.viewOffset = 0
+			m.vp.Cursor = 0
+			m.vp.Offset = 0
 		}
 	}
 	return m, nil
-}
-
-// snapViewOffset adjusts viewOffset so the cursor stays within the visible window.
-func (m *Model) snapViewOffset(total int) {
-	if m.cursor < m.viewOffset {
-		m.viewOffset = m.cursor
-	} else if m.cursor >= m.viewOffset+m.height {
-		m.viewOffset = m.cursor - m.height + 1
-	}
-	if m.viewOffset < 0 {
-		m.viewOffset = 0
-	}
 }
 
 // View renders the package list with the current filter and a cursor indicator.
@@ -156,24 +132,7 @@ func (m Model) View() string {
 	if len(filtered) == 0 {
 		sb.WriteString("  (no matches)\n")
 	} else {
-		end := m.viewOffset + m.height
-		if m.height <= 0 || end > len(filtered) {
-			end = len(filtered)
-		}
-
-		if m.viewOffset > 0 {
-			sb.WriteString(fmt.Sprintf("  (%d more above)\n", m.viewOffset))
-		}
-		for i := m.viewOffset; i < end; i++ {
-			if i == m.cursor {
-				sb.WriteString(fmt.Sprintf("  > %s\n", filtered[i]))
-			} else {
-				sb.WriteString(fmt.Sprintf("    %s\n", filtered[i]))
-			}
-		}
-		if end < len(filtered) {
-			sb.WriteString(fmt.Sprintf("  (%d more below)\n", len(filtered)-end))
-		}
+		m.vp.RenderList(&sb, filtered)
 	}
 	sb.WriteString("\n  type to filter  ↑/↓ navigate  enter select  ctrl+c/esc cancel\n")
 	return sb.String()

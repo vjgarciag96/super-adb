@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/vicgarci/sadb/internal/viewport"
 )
 
 // ErrAborted is returned when the user cancels the picker with Ctrl+C or Escape.
@@ -17,18 +19,21 @@ var ErrAborted = errors.New("picker aborted")
 // It is exported so tests can drive it without running a full terminal program.
 type Model struct {
 	devices  []string
-	cursor   int
+	vp       viewport.Viewport
 	aborted  bool
 	selected string
 }
 
 // New creates a Model with the given device list. Cursor starts at 0.
 func New(devices []string) Model {
-	return Model{devices: devices}
+	return Model{devices: devices, vp: viewport.Viewport{Height: 10}}
 }
 
 // Cursor returns the current highlighted index.
-func (m Model) Cursor() int { return m.cursor }
+func (m Model) Cursor() int { return m.vp.Cursor }
+
+// ViewOffset returns the index of the first visible device in the list.
+func (m Model) ViewOffset() int { return m.vp.Offset }
 
 // Selected returns the serial of the chosen device, or "" if no selection has been made.
 func (m Model) Selected() string { return m.selected }
@@ -42,15 +47,19 @@ func (m Model) Init() tea.Cmd { return nil }
 // Update processes keyboard input.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.vp.SetHeight(msg.Height, 6, 5)
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyUp:
-			m.cursor = (m.cursor - 1 + len(m.devices)) % len(m.devices)
+			m.vp.MoveUp(len(m.devices))
 		case tea.KeyDown:
-			m.cursor = (m.cursor + 1) % len(m.devices)
+			m.vp.MoveDown(len(m.devices))
 		case tea.KeyEnter:
-			m.selected = m.devices[m.cursor]
-			return m, tea.Quit
+			if len(m.devices) > 0 {
+				m.selected = m.devices[m.vp.Cursor]
+				return m, tea.Quit
+			}
 		case tea.KeyCtrlC, tea.KeyEsc:
 			m.aborted = true
 			return m, tea.Quit
@@ -60,15 +69,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders the device list with a cursor indicator.
+// Only a window of height items is rendered at a time; scroll hints appear
+// when more items exist above or below the visible range.
 func (m Model) View() string {
 	var sb strings.Builder
 	sb.WriteString("Select a device:\n\n")
-	for i, d := range m.devices {
-		if i == m.cursor {
-			sb.WriteString(fmt.Sprintf("  > %s\n", d))
-		} else {
-			sb.WriteString(fmt.Sprintf("    %s\n", d))
-		}
+
+	if len(m.devices) == 0 {
+		sb.WriteString("  (no devices)\n")
+	} else {
+		m.vp.RenderList(&sb, m.devices)
 	}
 	sb.WriteString("\n  ↑/↓ navigate  enter select  ctrl+c/esc cancel\n")
 	return sb.String()

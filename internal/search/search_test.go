@@ -262,92 +262,7 @@ func TestModel_ViewShowsFilter(t *testing.T) {
 	}
 }
 
-// --- Viewport / scrolling tests ---
-
-// makePackages returns n distinct package names for use in viewport tests.
-func makePackages(n int) []string {
-	pkgs := make([]string, n)
-	for i := range pkgs {
-		pkgs[i] = fmt.Sprintf("com.example.pkg%03d", i)
-	}
-	return pkgs
-}
-
-func TestModel_ViewOffset_InitiallyZero(t *testing.T) {
-	m := search.New(makePackages(20))
-	if m.ViewOffset() != 0 {
-		t.Errorf("expected initial viewOffset 0, got %d", m.ViewOffset())
-	}
-}
-
-func TestModel_ViewOffset_ShiftsDownWhenCursorLeavesWindow(t *testing.T) {
-	// Default height is 10; pressing down 10 times moves cursor to index 10,
-	// which is one past the last visible item [0..9], so viewOffset must advance.
-	m := search.New(makePackages(20))
-	for i := 0; i < 10; i++ {
-		m = pressKey(m, "down")
-	}
-	if m.Cursor() != 10 {
-		t.Fatalf("expected cursor 10, got %d", m.Cursor())
-	}
-	if m.ViewOffset() == 0 {
-		t.Errorf("expected viewOffset to have advanced past 0, got %d", m.ViewOffset())
-	}
-	// cursor must be within the visible window
-	if m.Cursor() < m.ViewOffset() || m.Cursor() >= m.ViewOffset()+10 {
-		t.Errorf("cursor %d outside visible window [%d, %d)", m.Cursor(), m.ViewOffset(), m.ViewOffset()+10)
-	}
-}
-
-func TestModel_ViewOffset_ShiftsUpWhenCursorLeavesWindow(t *testing.T) {
-	// Navigate to the bottom of a 20-item list, then navigate back up past the window top.
-	m := search.New(makePackages(20))
-	for i := 0; i < 15; i++ {
-		m = pressKey(m, "down")
-	}
-	offsetAtBottom := m.ViewOffset()
-
-	for i := 0; i < 10; i++ {
-		m = pressKey(m, "up")
-	}
-	if m.ViewOffset() >= offsetAtBottom {
-		t.Errorf("expected viewOffset to decrease after navigating up; was %d, now %d", offsetAtBottom, m.ViewOffset())
-	}
-	if m.Cursor() < m.ViewOffset() || m.Cursor() >= m.ViewOffset()+10 {
-		t.Errorf("cursor %d outside visible window [%d, %d)", m.Cursor(), m.ViewOffset(), m.ViewOffset()+10)
-	}
-}
-
-func TestModel_ViewOffset_ResetsOnWrapToTop(t *testing.T) {
-	// Navigate to end of list so viewOffset > 0, then wrap to top with one more down.
-	m := search.New(makePackages(15))
-	for i := 0; i < 14; i++ {
-		m = pressKey(m, "down")
-	}
-	if m.ViewOffset() == 0 {
-		t.Fatal("expected viewOffset > 0 near end of list")
-	}
-	m = pressKey(m, "down") // wraps to index 0
-	if m.Cursor() != 0 {
-		t.Fatalf("expected cursor to wrap to 0, got %d", m.Cursor())
-	}
-	if m.ViewOffset() != 0 {
-		t.Errorf("expected viewOffset to reset to 0 on wrap, got %d", m.ViewOffset())
-	}
-}
-
-func TestModel_ViewOffset_ShowsLastItemsOnWrapToBottom(t *testing.T) {
-	// From the top, pressing up wraps cursor to the last item.
-	// viewOffset must shift so the last item is visible.
-	m := search.New(makePackages(15))
-	m = pressKey(m, "up") // wraps to index 14
-	if m.Cursor() != 14 {
-		t.Fatalf("expected cursor 14 after wrap, got %d", m.Cursor())
-	}
-	if m.Cursor() < m.ViewOffset() || m.Cursor() >= m.ViewOffset()+10 {
-		t.Errorf("cursor %d outside visible window [%d, %d)", m.Cursor(), m.ViewOffset(), m.ViewOffset()+10)
-	}
-}
+// --- Viewport / filter interaction tests ---
 
 func TestModel_ViewOffset_ResetsOnTyping(t *testing.T) {
 	m := search.New(makePackages(20))
@@ -378,70 +293,11 @@ func TestModel_ViewOffset_ResetsOnBackspace(t *testing.T) {
 	}
 }
 
-func TestModel_WindowSizeMsg_UpdatesHeight(t *testing.T) {
-	m := search.New(makePackages(5))
-	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
-	m = updated.(search.Model)
-	// height = 30 - 6 = 24
-	// We verify indirectly: with 5 packages and height 24, the view must show all 5.
-	view := m.View()
-	for i := 0; i < 5; i++ {
-		pkg := fmt.Sprintf("com.example.pkg%03d", i)
-		if !strings.Contains(view, pkg) {
-			t.Errorf("expected view to contain %q after WindowSizeMsg\nview:\n%s", pkg, view)
-		}
+// makePackages returns n distinct package names for use in tests.
+func makePackages(n int) []string {
+	pkgs := make([]string, n)
+	for i := range pkgs {
+		pkgs[i] = fmt.Sprintf("com.example.pkg%03d", i)
 	}
-}
-
-func TestModel_WindowSizeMsg_MinimumHeight(t *testing.T) {
-	m := search.New(makePackages(5))
-	// Very small terminal: height - 6 would be negative, must clamp to 5.
-	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 3})
-	m = updated.(search.Model)
-	view := m.View()
-	// Should not panic and should still render something.
-	if !strings.Contains(view, "Search packages") {
-		t.Errorf("expected view header after tiny WindowSizeMsg\nview:\n%s", view)
-	}
-}
-
-func TestModel_View_ShowsScrollHintBelow(t *testing.T) {
-	// 20 items, default height 10: items 10-19 are below the window.
-	m := search.New(makePackages(20))
-	view := m.View()
-	if !strings.Contains(view, "more below") {
-		t.Errorf("expected 'more below' hint in view\nview:\n%s", view)
-	}
-}
-
-func TestModel_View_ShowsScrollHintAbove(t *testing.T) {
-	m := search.New(makePackages(20))
-	for i := 0; i < 10; i++ {
-		m = pressKey(m, "down")
-	}
-	view := m.View()
-	if !strings.Contains(view, "more above") {
-		t.Errorf("expected 'more above' hint after scrolling down\nview:\n%s", view)
-	}
-}
-
-func TestModel_View_NoScrollHintsWhenAllFit(t *testing.T) {
-	// 5 items fit within the default height of 10: no hints expected.
-	m := search.New(makePackages(5))
-	view := m.View()
-	if strings.Contains(view, "more above") || strings.Contains(view, "more below") {
-		t.Errorf("expected no scroll hints when all items fit\nview:\n%s", view)
-	}
-}
-
-func TestModel_View_OnlyRendersVisibleItems(t *testing.T) {
-	// With height=10 and 20 items, only items 0-9 should appear initially.
-	m := search.New(makePackages(20))
-	view := m.View()
-	if !strings.Contains(view, "pkg000") {
-		t.Errorf("expected first item in view")
-	}
-	if strings.Contains(view, "pkg010") {
-		t.Errorf("did not expect item 10 in initial view (height=10)")
-	}
+	return pkgs
 }
