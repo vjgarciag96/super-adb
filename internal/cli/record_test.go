@@ -10,6 +10,7 @@ import (
 func TestRunRecord_SavesToExplicitPath(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	f.QueueResponse("", nil)              // screenrecord
+	f.QueueResponse("", nil)              // pgrep screenrecord → empty, process gone
 	f.QueueResponse("1 file pulled", nil) // pull
 	f.QueueResponse("", nil)              // rm
 
@@ -26,6 +27,7 @@ func TestRunRecord_SavesToExplicitPath(t *testing.T) {
 func TestRunRecord_UsesResolvedSerial(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	f.QueueResponse("", nil)              // screenrecord
+	f.QueueResponse("", nil)              // pgrep screenrecord → empty, process gone
 	f.QueueResponse("1 file pulled", nil) // pull
 	f.QueueResponse("", nil)              // rm
 
@@ -33,8 +35,8 @@ func TestRunRecord_UsesResolvedSerial(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(f.Calls) != 3 {
-		t.Fatalf("expected 3 ADB calls, got %d", len(f.Calls))
+	if len(f.Calls) != 4 {
+		t.Fatalf("expected 4 ADB calls, got %d", len(f.Calls))
 	}
 	for _, call := range f.Calls {
 		if call.Serial != "env-device-456" {
