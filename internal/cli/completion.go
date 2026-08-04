@@ -243,6 +243,7 @@ func init() {
 	// inherit the persistent flag.
 	_ = rootCmd.RegisterFlagCompletionFunc("serial", completeDeviceSerials)
 
-	// Suggest package names when completing the uninstall argument.
+	// Suggest package names when completing the uninstall and clear-data arguments.
 	uninstallCmd.ValidArgsFunction = makeCompletePackages(adb.ShellRunner{})
+	clearDataCmd.ValidArgsFunction = makeCompletePackages(adb.ShellRunner{})
 }
