@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"strings"
 	"syscall"
 	"time"
 
@@ -60,6 +61,13 @@ func RunVideo(serial string, runner adb.Runner, localPath string) (string, error
 		return "", fmt.Errorf("screenrecord: %w", err)
 	}
 
+	// screenrecord writes the MP4 moov atom during graceful shutdown. When the
+	// adb connection drops (SIGINT kills the local adb process), the device-side
+	// screenrecord receives SIGHUP and begins finalizing the file. Pull too early
+	// and the moov atom is missing, producing a corrupted video. Wait until the
+	// process is gone before pulling.
+	waitForScreenrecord(serial, runner)
+
 	return pullAndClean(serial, runner, devicePath, localPath)
 }
 
@@ -72,6 +80,20 @@ func pullAndClean(serial string, runner adb.Runner, devicePath, localPath string
 	}
 	_, _ = runner.Run(serial, "shell", "rm", devicePath)
 	return localPath, nil
+}
+
+// waitForScreenrecord polls the device until the screenrecord process has exited,
+// up to a 10-second deadline. This ensures the MP4 moov atom has been flushed
+// before we attempt adb pull.
+func waitForScreenrecord(serial string, runner adb.Runner) {
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		out, _ := runner.Run(serial, "shell", "pgrep", "screenrecord")
+		if strings.TrimSpace(out) == "" {
+			return
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
 }
 
 // isSignalExit reports whether err represents a process that was killed by a

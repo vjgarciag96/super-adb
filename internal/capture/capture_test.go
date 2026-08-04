@@ -110,6 +110,7 @@ func TestRunPhoto_PullError_CleanupStillRuns(t *testing.T) {
 func TestRunVideo_Success(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	f.QueueResponse("", nil)              // screenrecord (completes naturally or via signal)
+	f.QueueResponse("", nil)              // pgrep screenrecord → empty means process gone
 	f.QueueResponse("1 file pulled", nil) // pull
 	f.QueueResponse("", nil)              // rm
 
@@ -123,8 +124,8 @@ func TestRunVideo_Success(t *testing.T) {
 		t.Errorf("expected returned path %q, got %q", localPath, got)
 	}
 
-	if len(f.Calls) != 3 {
-		t.Fatalf("expected 3 ADB calls, got %d: %+v", len(f.Calls), f.Calls)
+	if len(f.Calls) != 4 {
+		t.Fatalf("expected 4 ADB calls, got %d: %+v", len(f.Calls), f.Calls)
 	}
 
 	// Call 0: adb shell screenrecord /sdcard/sadb_video_<ts>.mp4
@@ -140,8 +141,14 @@ func TestRunVideo_Success(t *testing.T) {
 		t.Errorf("screenrecord: unexpected device path %q", devicePath)
 	}
 
-	// Call 1: adb pull <device_path> <local_path>
-	pull := f.Calls[1]
+	// Call 1: adb shell pgrep screenrecord (process-wait poll)
+	pgrep := f.Calls[1]
+	if len(pgrep.Args) < 3 || pgrep.Args[0] != "shell" || pgrep.Args[1] != "pgrep" || pgrep.Args[2] != "screenrecord" {
+		t.Errorf("pgrep: unexpected args %v", pgrep.Args)
+	}
+
+	// Call 2: adb pull <device_path> <local_path>
+	pull := f.Calls[2]
 	if pull.Args[0] != "pull" || pull.Args[1] != devicePath {
 		t.Errorf("pull: unexpected args %v", pull.Args)
 	}
@@ -149,8 +156,8 @@ func TestRunVideo_Success(t *testing.T) {
 		t.Errorf("pull: expected local path %q, got %q", localPath, pull.Args[2])
 	}
 
-	// Call 2: adb shell rm <device_path>
-	rm := f.Calls[2]
+	// Call 3: adb shell rm <device_path>
+	rm := f.Calls[3]
 	if len(rm.Args) < 3 || rm.Args[0] != "shell" || rm.Args[1] != "rm" || rm.Args[2] != devicePath {
 		t.Errorf("rm: unexpected args %v", rm.Args)
 	}
@@ -159,6 +166,7 @@ func TestRunVideo_Success(t *testing.T) {
 func TestRunVideo_PullError_CleanupStillRuns(t *testing.T) {
 	f := &adbtest.FakeRunner{}
 	f.QueueResponse("", nil)                            // screenrecord
+	f.QueueResponse("", nil)                            // pgrep screenrecord → empty, process gone
 	f.QueueResponse("", errors.New("connection reset")) // pull fails
 	f.QueueResponse("", nil)                            // rm cleanup
 
@@ -166,12 +174,46 @@ func TestRunVideo_PullError_CleanupStillRuns(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when pull fails, got nil")
 	}
-	if len(f.Calls) != 3 {
-		t.Fatalf("expected 3 calls (screenrecord, pull, rm), got %d", len(f.Calls))
+	if len(f.Calls) != 4 {
+		t.Fatalf("expected 4 calls (screenrecord, pgrep, pull, rm), got %d", len(f.Calls))
 	}
-	rm := f.Calls[2]
+	rm := f.Calls[3]
 	if len(rm.Args) < 2 || rm.Args[0] != "shell" || rm.Args[1] != "rm" {
 		t.Errorf("expected rm cleanup after pull failure, got %v", rm.Args)
+	}
+}
+
+// TestRunVideo_PullDeferredUntilScreenrecordExits verifies that adb pull does
+// not run until the device-side screenrecord process has fully exited.
+// This is the regression test for corrupted videos: the MP4 moov atom is
+// written during screenrecord's graceful shutdown, so pulling too early
+// produces an unplayable file.
+func TestRunVideo_PullDeferredUntilScreenrecordExits(t *testing.T) {
+	f := &adbtest.FakeRunner{}
+	f.QueueResponse("", nil)       // screenrecord exits (signal)
+	f.QueueResponse("1234\n", nil) // pgrep → PID present, still finalizing
+	f.QueueResponse("", nil)       // pgrep → empty, process gone, moov atom written
+	f.QueueResponse("", nil)       // pull
+	f.QueueResponse("", nil)       // rm
+
+	localPath := filepath.Join(t.TempDir(), "video.mp4")
+	if _, err := capture.RunVideo("emulator-5554", f, localPath); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(f.Calls) != 5 {
+		t.Fatalf("expected 5 ADB calls, got %d: %+v", len(f.Calls), f.Calls)
+	}
+
+	// Verify ordering: both pgrep polls must precede the pull.
+	for i, call := range f.Calls[1:3] {
+		if len(call.Args) < 3 || call.Args[0] != "shell" || call.Args[1] != "pgrep" || call.Args[2] != "screenrecord" {
+			t.Errorf("call[%d]: expected pgrep screenrecord, got %v", i+1, call.Args)
+		}
+	}
+	pull := f.Calls[3]
+	if pull.Args[0] != "pull" {
+		t.Errorf("call[3]: expected pull, got %v", pull.Args)
 	}
 }
 
