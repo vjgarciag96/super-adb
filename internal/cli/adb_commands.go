@@ -7,6 +7,7 @@ var adbCommands = []string{
 	"attach",
 	"backup",
 	"bugreport",
+	"clear-data",
 	"connect",
 	"detach",
 	"devices",
