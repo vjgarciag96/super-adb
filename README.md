@@ -26,6 +26,7 @@ Shell completions (zsh, bash, fish) are activated automatically.
 | `sadb shot [--output path]` | Take a screenshot and pull it locally |
 | `sadb record [--output path]` | Record the screen and pull it locally (Ctrl+C to stop) |
 | `sadb uninstall [package]` | Uninstall a package, with fuzzy search if no package given |
+| `sadb clear-data [package]` | Clear app data, with fuzzy search if no package given |
 | `sadb completion install` | Install shell completions manually |
 
 ## Requirements
