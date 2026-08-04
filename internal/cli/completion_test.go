@@ -2,6 +2,7 @@ package cli
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -106,6 +107,28 @@ func TestCompletePackages_RunnerError_ReturnsEmpty(t *testing.T) {
 
 	if len(got) != 0 {
 		t.Errorf("expected empty on error, got %v", got)
+	}
+}
+
+func TestAllCuratedCommandsInAdbCommands(t *testing.T) {
+	inList := make(map[string]bool, len(adbCommands))
+	for _, c := range adbCommands {
+		inList[c] = true
+	}
+
+	var missing []string
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Hidden || cmd.Name() == "help" {
+			continue
+		}
+		if !inList[cmd.Name()] {
+			missing = append(missing, cmd.Name())
+		}
+	}
+
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		t.Errorf("curated commands not in adbCommands (tab completion will be missing them): %v", missing)
 	}
 }
 
