@@ -1,5 +1,8 @@
 # Build output
 /sadb
 
+# macOS
+.DS_Store
+
 # Go test cache / cover profiles
 *.out
