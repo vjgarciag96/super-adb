@@ -22,20 +22,21 @@ An optional positional argument overrides the auto-generated filename:
 If omitted, the file is saved as photo_<timestamp>.png under the current
 working directory (or the directory given by --output).`,
 	Args: cobra.MaximumNArgs(1),
-	RunE: withDevice(func(cmd *cobra.Command, args []string, runner adb.Runner, serial string) error {
-		autoName := fmt.Sprintf("photo_%s.png", time.Now().Format("20060102_150405"))
-		localPath, err := resolveCapturePath(cmd, args, autoName)
-		if err != nil {
-			return err
-		}
+	RunE: withDevice(shotRunE),
+}
 
-		localPath, err = runShot(runner, serial, localPath)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Saved: %s\n", localPath)
-		return nil
-	}),
+func shotRunE(cmd *cobra.Command, args []string, runner adb.Runner, serial string) error {
+	autoName := fmt.Sprintf("photo_%s.png", time.Now().Format("20060102_150405"))
+	localPath, err := resolveCapturePath(cmd, args, autoName, ".png")
+	if err != nil {
+		return err
+	}
+	localPath, err = runShot(runner, serial, localPath)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "Saved: %s\n", localPath)
+	return nil
 }
 
 // runShot takes a screenshot on the given device and saves it to localPath.

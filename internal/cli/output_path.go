@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -12,7 +13,10 @@ import (
 // (shot or record). It reads the --output flag and optional positional
 // argument from cmd/args, enforces their mutual exclusion, and falls back to
 // autoName under cwd or --output dir when no explicit path is given.
-func resolveCapturePath(cmd *cobra.Command, args []string, autoName string) (string, error) {
+// expectedExt is the required file extension (e.g. ".png", ".mp4"); when an
+// explicit path is supplied with the wrong extension it is replaced and a
+// warning is written to os.Stderr.
+func resolveCapturePath(cmd *cobra.Command, args []string, autoName, expectedExt string) (string, error) {
 	outputDir, _ := cmd.Flags().GetString("output")
 	var explicitPath string
 	if len(args) > 0 {
@@ -20,6 +24,14 @@ func resolveCapturePath(cmd *cobra.Command, args []string, autoName string) (str
 	}
 	if err := validateExclusive(outputDir, explicitPath); err != nil {
 		return "", err
+	}
+	if explicitPath != "" {
+		cmdName := cmd.Name()
+		fixed, warn := normaliseExtension(explicitPath, expectedExt, cmdName)
+		if warn != "" {
+			fmt.Fprintln(os.Stderr, warn)
+		}
+		explicitPath = fixed
 	}
 	return resolveOutputPath(outputDir, explicitPath, autoName)
 }
@@ -41,6 +53,23 @@ func resolveOutputPath(outputDir, explicitPath, autoName string) (string, error)
 		}
 	}
 	return filepath.Join(outputDir, autoName), nil
+}
+
+// normaliseExtension checks whether path has the expected extension (case-insensitive).
+// If the path has no extension, it appends expectedExt and returns (newPath, "").
+// If the path has the wrong extension, it replaces it and returns (newPath, warning).
+// If the extension is correct (any case), it returns (path, "").
+func normaliseExtension(path, expectedExt, cmdName string) (string, string) {
+	ext := filepath.Ext(path)
+	if ext == "" {
+		return path + expectedExt, ""
+	}
+	if strings.EqualFold(ext, expectedExt) {
+		return path, ""
+	}
+	newPath := path[:len(path)-len(ext)] + expectedExt
+	warning := fmt.Sprintf("Warning: %s is not valid for %s, saving as %s", ext, cmdName, filepath.Base(newPath))
+	return newPath, warning
 }
 
 // validateExclusive returns an error when both --output and a positional <path>

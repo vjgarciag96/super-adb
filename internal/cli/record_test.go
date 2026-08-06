@@ -1,11 +1,49 @@
 package cli
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/vicgarci/sadb/adb/adbtest"
 )
+
+func TestRecordRunE_WrongExtension_CorrectedToMp4(t *testing.T) {
+	f := &adbtest.FakeRunner{}
+	f.QueueResponse("", nil)              // screenrecord
+	f.QueueResponse("", nil)              // pgrep screenrecord → empty, process gone
+	f.QueueResponse("1 file pulled", nil) // pull
+	f.QueueResponse("", nil)              // rm
+
+	orig := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stderr = w
+
+	err = recordRunE(recordCmd, []string{"demo.avi"}, f, "emulator-5554")
+
+	w.Close()
+	os.Stderr = orig
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	wantWarn := "Warning: .avi is not valid for record, saving as demo.mp4"
+	if !bytes.Contains(buf.Bytes(), []byte(wantWarn)) {
+		t.Errorf("stderr: expected %q, got %q", wantWarn, buf.String())
+	}
+	// Confirm the corrected path reached the ADB pull call.
+	pullCall := f.Calls[2]
+	if got := pullCall.Args[len(pullCall.Args)-1]; got != "demo.mp4" {
+		t.Errorf("pull destination: expected %q, got %q", "demo.mp4", got)
+	}
+}
 
 func TestRunRecord_SavesToExplicitPath(t *testing.T) {
 	f := &adbtest.FakeRunner{}

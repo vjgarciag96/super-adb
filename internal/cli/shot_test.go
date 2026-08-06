@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -11,6 +14,39 @@ import (
 type errFake string
 
 func (e errFake) Error() string { return string(e) }
+
+func TestShotRunE_WrongExtension_CorrectedToPng(t *testing.T) {
+	f := &adbtest.FakeRunner{}
+	f.QueueResponse("", nil)              // screencap
+	f.QueueResponse("1 file pulled", nil) // pull
+	f.QueueResponse("", nil)              // rm
+
+	orig := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stderr = w
+
+	err = shotRunE(shotCmd, []string{"myscreen.jpg"}, f, "emulator-5554")
+
+	w.Close()
+	os.Stderr = orig
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	wantWarn := "Warning: .jpg is not valid for shot, saving as myscreen.png"
+	if !bytes.Contains(buf.Bytes(), []byte(wantWarn)) {
+		t.Errorf("stderr: expected %q, got %q", wantWarn, buf.String())
+	}
+	// Confirm the corrected path reached the ADB pull call.
+	if got := f.Calls[1].Args[len(f.Calls[1].Args)-1]; got != "myscreen.png" {
+		t.Errorf("pull destination: expected %q, got %q", "myscreen.png", got)
+	}
+}
 
 func TestRunShot_SavesToExplicitPath(t *testing.T) {
 	f := &adbtest.FakeRunner{}
