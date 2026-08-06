@@ -246,4 +246,5 @@ func init() {
 	// Suggest package names when completing the uninstall and clear-data arguments.
 	uninstallCmd.ValidArgsFunction = makeCompletePackages(adb.ShellRunner{})
 	clearDataCmd.ValidArgsFunction = makeCompletePackages(adb.ShellRunner{})
+	launchCmd.ValidArgsFunction = makeCompletePackages(adb.ShellRunner{})
 }

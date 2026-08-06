@@ -29,6 +29,7 @@ var adbCommands = []string{
 	"jdwp",
 	"keygen",
 	"kill-server",
+	"launch",
 	"logcat",
 	"mdns",
 	"pair",
